@@ -130,6 +130,7 @@ pub fn fd_set(set: &mut fd_set, s: libc::SOCKET) {
 }
 
 pub type SHORT = libc::c_short;
+pub type PHANDLE = *mut libc::HANDLE;
 
 #[repr(C)]
 pub struct COORD {
@@ -463,6 +464,12 @@ extern "system" {
                            nOutBufferSize: libc::DWORD,
                            lpBytesReturned: libc::LPDWORD,
                            lpOverlapped: libc::LPOVERLAPPED) -> libc::BOOL;
+    pub fn CreatePipe(
+        hReadPipe: PHANDLE,
+        hWritePipe: PHANDLE,
+        lpPipeAttributes: libc::LPSECURITY_ATTRIBUTES,
+        nSize: libc::DWORD,
+    ) -> libc::BOOL;
 }
 
 #[link(name = "userenv")]
