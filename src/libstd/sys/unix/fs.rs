@@ -516,3 +516,20 @@ pub fn canonicalize(p: &Path) -> io::Result<PathBuf> {
     buf.truncate(p);
     Ok(PathBuf::from(OsString::from_vec(buf)))
 }
+
+pub fn copy(from: &Path, to: &Path) -> io::Result<u64> {
+    let from = from.as_ref();
+    let to = to.as_ref();
+    if !from.is_file() {
+        return Err(Error::new(ErrorKind::InvalidInput,
+                              "the source path is not an existing file"))
+    }
+
+    let mut reader = try!(File::open(from));
+    let mut writer = try!(File::create(to));
+    let perm = try!(reader.metadata()).permissions();
+
+    let ret = try!(io::copy(&mut reader, &mut writer));
+    try!(set_permissions(to, perm));
+    Ok(ret)
+}

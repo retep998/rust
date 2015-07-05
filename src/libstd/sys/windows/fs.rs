@@ -575,3 +575,31 @@ pub fn canonicalize(p: &Path) -> io::Result<PathBuf> {
         PathBuf::from(OsString::from_wide(buf))
     })
 }
+
+pub fn copy(from: &Path, to: &Path) -> io::Result<u64> {
+    unsafe extern "system" fn callback(
+        _TotalFileSize: libc::LARGE_INTEGER,
+        TotalBytesTransferred: libc::LARGE_INTEGER,
+        _StreamSize: libc::LARGE_INTEGER,
+        _StreamBytesTransferred: libc::LARGE_INTEGER,
+        _dwStreamNumber: libc::DWORD,
+        _dwCallbackReason: libc::DWORD,
+        _hSourceFile: HANDLE,
+        _hDestinationFile: HANDLE,
+        lpData: libc::LPVOID,
+    ) -> libc::DWORD {
+        // Alternative is to just grab TotalFileSize and return PROGRESS_QUIET
+        *(lpData as *mut i64) = TotalBytesTransferred;
+        c::PROGRESS_CONTINUE
+    }
+    let pfrom = to_utf16(from);
+    let pto = to_utf16(to);
+    let mut size = 0i64;
+    // Do we want to allow encrypted files to be copied to a decrypted destination?
+    try!(cvt(unsafe {
+        c::CopyFileExW(pfrom.as_ptr(), pto.as_ptr(), Some(callback),
+                       &mut size as *mut _ as *mut _, ptr::null_mut(),
+                       c::COPY_FILE_ALLOW_DECRYPTED_DESTINATION)
+    }));
+    Ok(size as u64)
+}

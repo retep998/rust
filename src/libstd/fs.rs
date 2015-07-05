@@ -21,7 +21,7 @@ use core::prelude::*;
 
 use fmt;
 use ffi::OsString;
-use io::{self, Error, ErrorKind, SeekFrom, Seek, Read, Write};
+use io::{self, SeekFrom, Seek, Read, Write};
 use path::{Path, PathBuf};
 use sys::fs as fs_imp;
 use sys_common::{AsInnerMut, FromInner, AsInner};
@@ -858,20 +858,7 @@ pub fn rename<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q) -> io::Result<()> 
 /// ```
 #[stable(feature = "rust1", since = "1.0.0")]
 pub fn copy<P: AsRef<Path>, Q: AsRef<Path>>(from: P, to: Q) -> io::Result<u64> {
-    let from = from.as_ref();
-    let to = to.as_ref();
-    if !from.is_file() {
-        return Err(Error::new(ErrorKind::InvalidInput,
-                              "the source path is not an existing file"))
-    }
-
-    let mut reader = try!(File::open(from));
-    let mut writer = try!(File::create(to));
-    let perm = try!(reader.metadata()).permissions();
-
-    let ret = try!(io::copy(&mut reader, &mut writer));
-    try!(set_permissions(to, perm));
-    Ok(ret)
+    fs_imp::copy(from.as_ref(), to.as_ref())
 }
 
 /// Creates a new hard link on the filesystem.
