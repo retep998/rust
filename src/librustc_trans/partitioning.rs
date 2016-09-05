@@ -288,7 +288,8 @@ pub fn partition<'a, 'tcx, I>(scx: &SharedCrateContext<'a, 'tcx>,
     // translation items have to go into each codegen unit. These additional
     // translation items can be drop-glue, functions from external crates, and
     // local functions the definition of which is marked with #[inline].
-    let post_inlining = place_inlined_translation_items(initial_partitioning,
+    let post_inlining = place_inlined_translation_items(scx,
+                                                        initial_partitioning,
                                                         inlining_map);
 
     debug_dump(tcx, "POST INLINING:", post_inlining.0.iter());
@@ -320,7 +321,7 @@ fn place_root_translation_items<'a, 'tcx, I>(scx: &SharedCrateContext<'a, 'tcx>,
     let mut codegen_units = FnvHashMap();
 
     for trans_item in trans_items {
-        let is_root = !trans_item.is_instantiated_only_on_demand();
+        let is_root = !trans_item.is_instantiated_only_on_demand(tcx);
 
         if is_root {
             let characteristic_def_id = characteristic_def_id_of_trans_item(scx, trans_item);
@@ -416,9 +417,11 @@ fn merge_codegen_units<'tcx>(initial_partitioning: &mut PreInliningPartitioning<
     }
 }
 
-fn place_inlined_translation_items<'tcx>(initial_partitioning: PreInliningPartitioning<'tcx>,
-                                         inlining_map: &InliningMap<'tcx>)
-                                         -> PostInliningPartitioning<'tcx> {
+fn place_inlined_translation_items<'a, 'tcx>(scx: &SharedCrateContext<'a, 'tcx>,
+                                             initial_partitioning: PreInliningPartitioning<'tcx>,
+                                             inlining_map: &InliningMap<'tcx>)
+                                             -> PostInliningPartitioning<'tcx> {
+    let tcx = scx.tcx();
     let mut new_partitioning = Vec::new();
 
     for codegen_unit in &initial_partitioning.codegen_units[..] {
@@ -454,7 +457,7 @@ fn place_inlined_translation_items<'tcx>(initial_partitioning: PreInliningPartit
                 // reliably in that case.
                 new_codegen_unit.items.insert(trans_item, llvm::InternalLinkage);
             } else {
-                assert!(trans_item.is_instantiated_only_on_demand());
+                assert!(trans_item.is_instantiated_only_on_demand(tcx));
                 // We can't be sure if this will also be instantiated
                 // somewhere else, so we add an instance here with
                 // InternalLinkage so we don't get any conflicts.

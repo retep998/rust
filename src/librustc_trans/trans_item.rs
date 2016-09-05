@@ -262,14 +262,8 @@ impl<'a, 'tcx> TransItem<'tcx> {
         }
     }
 
-    pub fn is_instantiated_only_on_demand(&self) -> bool {
-        match *self {
-            TransItem::Fn(ref instance) => {
-                !instance.def.is_local() || instance.substs.types().next().is_some()
-            }
-            TransItem::DropGlue(..) => true,
-            TransItem::Static(..)   => false,
-        }
+    pub fn is_instantiated_only_on_demand(&self, tcx: TyCtxt<'a, 'tcx, 'tcx>) -> bool {
+        self.requests_inline(tcx) || self.is_from_extern_crate()
     }
 
     pub fn is_generic_fn(&self) -> bool {
